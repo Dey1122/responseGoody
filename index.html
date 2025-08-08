@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Respuesta de Pago Niubiz</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    .success {
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Resultado de la Transacción</h1>
+  
+  <div id="responseMessage">
+    <p>Cargando...</p>
+  </div>
+
+  <script>
+    // Función para obtener los parámetros de la URL
+    function getQueryParams() {
+      const params = new URLSearchParams(window.location.search);
+      const response = {
+        transactionToken: params.get('transactionToken'),
+        status: params.get('status'),
+        amount: params.get('amount'),
+        purchaseNumber: params.get('purchasenumber'),
+      };
+      return response;
+    }
+
+    // Mostrar el resultado de la transacción
+    function showTransactionResponse() {
+      const params = getQueryParams();
+      const responseMessage = document.getElementById('responseMessage');
+
+      if (params.status === 'AUTHORIZED') {
+        responseMessage.innerHTML = `<h2 class="success">¡Pago Autorizado Exitosamente!</h2>
+                                     <p><strong>Número de Pedido:</strong> ${params.purchaseNumber}</p>
+                                     <p><strong>Monto:</strong> S/${params.amount}</p>
+                                     <p><strong>Token de Transacción:</strong> ${params.transactionToken}</p>`;
+      } else {
+        responseMessage.innerHTML = `<h2 class="error">Pago No Autorizado</h2>
+                                     <p><strong>Error:</strong> ${params.status}</p>
+                                     <p><strong>Número de Pedido:</strong> ${params.purchaseNumber}</p>
+                                     <p><strong>Monto:</strong> S/${params.amount}</p>`;
+      }
+    }
+
+    // Llamar a la función para mostrar la respuesta
+    showTransactionResponse();
+  </script>
+
+</body>
+</html>
