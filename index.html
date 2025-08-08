@@ -9,57 +9,240 @@
       font-family: Arial, sans-serif;
       text-align: center;
       margin-top: 50px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      max-width: 600px;
+      margin: 0 auto;
     }
     .success {
-      color: green;
+      color: #28a745;
     }
     .error {
-      color: red;
+      color: #dc3545;
+    }
+    .info {
+      color: #17a2b8;
+    }
+    .debug-info {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 20px 0;
+      text-align: left;
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>Resultado de la Transacción</h1>
+    
+    <div id="responseMessage">
+      <p class="info">Procesando respuesta de Niubiz...</p>
+    </div>
 
-  <h1>Resultado de la Transacción</h1>
-  
-  <div id="responseMessage">
-    <p>Cargando...</p>
+    <div id="debugInfo" class="debug-info">
+      <h3>Información de Debug:</h3>
+      <p><strong>URL Actual:</strong> <span id="currentUrl"></span></p>
+      <p><strong>Método HTTP:</strong> <span id="httpMethod">POST/GET</span></p>
+      <div id="allParams"></div>
+    </div>
   </div>
 
   <script>
-    // Función para obtener los parámetros de la URL
-    function getQueryParams() {
-      const params = new URLSearchParams(window.location.search);
-      const response = {
-        transactionToken: params.get('transactionToken'),
-        status: params.get('status'),
-        amount: params.get('amount'),
-        purchaseNumber: params.get('purchasenumber'),
-      };
-      return response;
+    console.log('🚀 Página de respuesta cargada');
+    console.log('📍 URL completa:', window.location.href);
+
+    // Función para obtener TODOS los parámetros (URL y POST)
+    function getAllParams() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      
+      const allParams = {};
+      
+      // Parámetros de URL (GET)
+      for (const [key, value] of urlParams.entries()) {
+        allParams[key] = value;
+        console.log(`📝 URL Param: ${key} = ${value}`);
+      }
+      
+      // Parámetros de hash (por si acaso)
+      for (const [key, value] of hashParams.entries()) {
+        allParams[key] = value;
+        console.log(`🔗 Hash Param: ${key} = ${value}`);
+      }
+      
+      return allParams;
     }
 
-    // Mostrar el resultado de la transacción
-    function showTransactionResponse() {
-      const params = getQueryParams();
-      const responseMessage = document.getElementById('responseMessage');
+    // Función para detectar datos de formulario POST
+    function checkForPostData() {
+      // Buscar formularios ocultos que puedan contener datos POST
+      const forms = document.querySelectorAll('form');
+      const postData = {};
+      
+      forms.forEach(form => {
+        const inputs = form.querySelectorAll('input[type="hidden"]');
+        inputs.forEach(input => {
+          if (input.name && input.value) {
+            postData[input.name] = input.value;
+            console.log(`📋 Form Data: ${input.name} = ${input.value}`);
+          }
+        });
+      });
+      
+      return postData;
+    }
 
-      if (params.status === 'AUTHORIZED') {
-        responseMessage.innerHTML = `<h2 class="success">¡Pago Autorizado Exitosamente!</h2>
-                                     <p><strong>Número de Pedido:</strong> ${params.purchaseNumber}</p>
-                                     <p><strong>Monto:</strong> S/${params.amount}</p>
-                                     <p><strong>Token de Transacción:</strong> ${params.transactionToken}</p>`;
+    // Función para mostrar información de debug
+    function showDebugInfo() {
+      const url = window.location.href;
+      const urlParams = getAllParams();
+      const postData = checkForPostData();
+      
+      document.getElementById('currentUrl').textContent = url;
+      
+      // Mostrar todos los parámetros
+      let paramsHtml = '<h4>Parámetros recibidos:</h4>';
+      const allData = { ...urlParams, ...postData };
+      
+      if (Object.keys(allData).length > 0) {
+        paramsHtml += '<ul>';
+        for (const [key, value] of Object.entries(allData)) {
+          paramsHtml += `<li><strong>${key}:</strong> ${value}</li>`;
+        }
+        paramsHtml += '</ul>';
       } else {
-        responseMessage.innerHTML = `<h2 class="error">Pago No Autorizado</h2>
-                                     <p><strong>Error:</strong> ${params.status}</p>
-                                     <p><strong>Número de Pedido:</strong> ${params.purchaseNumber}</p>
-                                     <p><strong>Monto:</strong> S/${params.amount}</p>`;
+        paramsHtml += '<p>❌ No se recibieron parámetros</p>';
+      }
+      
+      document.getElementById('allParams').innerHTML = paramsHtml;
+      
+      return allData;
+    }
+
+    // Función para procesar la respuesta de Niubiz
+    function processNiubizResponse(params) {
+      const responseMessage = document.getElementById('responseMessage');
+      
+      // Buscar los parámetros estándar de Niubiz según documentación
+      const transactionToken = params.transactionToken || params.transactiontoken;
+      const customerEmail = params.customerEmail || params.customeremail;
+      const channel = params.channel;
+      const url = params.url;
+      
+      console.log('🔍 Analizando parámetros de Niubiz:');
+      console.log('- transactionToken:', transactionToken);
+      console.log('- customerEmail:', customerEmail);
+      console.log('- channel:', channel);
+      console.log('- url:', url);
+      
+      if (transactionToken && transactionToken.trim() !== '') {
+        // ✅ Respuesta exitosa de Niubiz
+        responseMessage.innerHTML = `
+          <h2 class="success">✅ ¡Pago Completado!</h2>
+          <p><strong>Token de Transacción:</strong> ${transactionToken}</p>
+          <p><strong>Email del Cliente:</strong> ${customerEmail || 'No proporcionado'}</p>
+          <p><strong>Canal:</strong> ${channel || 'web'}</p>
+          ${url ? `<p><strong>URL Adicional:</strong> ${url}</p>` : ''}
+          <div class="info">
+            <p><strong>⚠️ Importante:</strong> Ahora se procesará la autorización automáticamente.</p>
+          </div>
+        `;
+        
+        // Enviar datos a Flutter si está disponible
+        if (window.FlutterNiubiz) {
+          const data = {
+            type: 'success',
+            transactionToken: transactionToken,
+            customerEmail: customerEmail,
+            channel: channel || 'web'
+          };
+          console.log('📱 Enviando datos a Flutter:', data);
+          window.FlutterNiubiz.postMessage(JSON.stringify(data));
+        } else {
+          console.log('⚠️ FlutterNiubiz no disponible');
+        }
+        
+      } else if (Object.keys(params).length > 0) {
+        // ❌ Hay parámetros pero no el token esperado
+        responseMessage.innerHTML = `
+          <h2 class="error">❌ Respuesta Incompleta</h2>
+          <p>Se recibieron datos pero falta el token de transacción.</p>
+          <p>Esto puede indicar que el pago no se completó correctamente.</p>
+        `;
+      } else {
+        // ℹ️ No hay parámetros - acceso directo
+        responseMessage.innerHTML = `
+          <h2 class="info">ℹ️ Página de Respuesta</h2>
+          <p>Esta página está lista para recibir respuestas de Niubiz.</p>
+          <p>No se detectaron parámetros de transacción en la URL.</p>
+        `;
       }
     }
 
-    // Llamar a la función para mostrar la respuesta
-    showTransactionResponse();
-  </script>
+    // Función para capturar datos POST cuando lleguen
+    function captureIncomingData() {
+      // Monitor para cambios en la página que puedan indicar datos POST
+      const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          if (mutation.type === 'childList') {
+            // Re-analizar si hay nuevos datos
+            const newParams = showDebugInfo();
+            processNiubizResponse(newParams);
+          }
+        });
+      });
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    }
 
+    // Ejecutar cuando la página carga
+    window.addEventListener('load', function() {
+      console.log('📄 Página completamente cargada');
+      const params = showDebugInfo();
+      processNiubizResponse(params);
+      captureIncomingData();
+    });
+
+    // También ejecutar inmediatamente por si ya tenemos datos
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🏁 DOM listo');
+      const params = showDebugInfo();
+      processNiubizResponse(params);
+    });
+
+    // Capturar mensajes de otras ventanas/frames
+    window.addEventListener('message', function(event) {
+      console.log('📨 Mensaje recibido:', event.data);
+      if (event.data && typeof event.data === 'object') {
+        processNiubizResponse(event.data);
+      }
+    });
+
+    // Debug: Mostrar info cada 2 segundos por 10 segundos
+    let debugCounter = 0;
+    const debugInterval = setInterval(() => {
+      debugCounter++;
+      console.log(`🔄 Debug check #${debugCounter}`);
+      const params = getAllParams();
+      if (Object.keys(params).length > 0 || debugCounter >= 5) {
+        clearInterval(debugInterval);
+        if (Object.keys(params).length > 0) {
+          console.log('✅ Parámetros encontrados, procesando...');
+          processNiubizResponse(params);
+        }
+      }
+    }, 2000);
+  </script>
 </body>
 </html>
